@@ -12,6 +12,105 @@ const crypto = require('crypto');
 const db = require('./db');
 const { authMiddleware, requireAdmin } = require('./auth');
 const { ProbeGenerator, PROBE_TEMPLATES } = require('../agent/probe-generator');
+const { ResponseScorer } = require('../agent/scorer');
+
+const scorer = new ResponseScorer();
+
+/**
+ * Execute a raid against a real target agent and write findings as they land.
+ * Target contract is OpenAI-compatible /v1/chat/completions.
+ * Non-blocking: the caller should kick this off with .catch() and return
+ * the session id to the client immediately so polling picks up findings.
+ */
+async function executeRaidAgainstTarget({
+  sessionId,
+  userId,
+  businessType,
+  probes,
+  target,
+}) {
+  const {
+    endpoint,
+    api_key,
+    model = 'gpt-4o-mini',
+    system_prompt = null,
+    timeout_ms = 30000,
+  } = target;
+
+  for (const probe of probes) {
+    let responseText = '';
+    try {
+      const messages = [];
+      if (system_prompt) {
+        messages.push({ role: 'system', content: system_prompt });
+      }
+      messages.push({ role: 'user', content: probe.probe });
+
+      const controller = new AbortController();
+      const abortTimer = setTimeout(() => controller.abort(), timeout_ms);
+
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${api_key}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model,
+          messages,
+          max_tokens: 500,
+          temperature: 0.7,
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(abortTimer);
+
+      if (res.ok) {
+        const body = await res.json();
+        responseText = body.choices?.[0]?.message?.content || '';
+      } else {
+        const errText = await res.text().catch(() => '');
+        responseText = `[target returned ${res.status}] ${errText.slice(0, 200)}`;
+      }
+    } catch (err) {
+      responseText = `[executor error] ${err.message || String(err)}`;
+    }
+
+    const scoreResult = scorer.scoreResponse(responseText, {
+      title: probe.title,
+      question: probe.probe,
+      severity: probe.severity,
+    });
+
+    try {
+      db.createFinding({
+        session_id: sessionId,
+        user_id: userId,
+        business_type: businessType,
+        probe_title: probe.title,
+        probe_question: probe.probe,
+        response: responseText,
+        score: scoreResult.score,
+        grade: scoreResult.grade,
+        severity: probe.severity,
+        assessment: scoreResult.assessment,
+        signals: scoreResult.findings,
+        timestamp: new Date().toISOString(),
+      });
+      console.log(
+        `[Raid ${sessionId}] probe="${probe.title}" score=${scoreResult.score} grade=${scoreResult.grade}`
+      );
+    } catch (err) {
+      console.error(`[Raid ${sessionId}] db write failed:`, err.message);
+    }
+
+    // Brief pause between probes so the battle scene animates visibly
+    // and we don't hammer the target endpoint.
+    await new Promise((r) => setTimeout(r, 800));
+  }
+
+  console.log(`[Raid ${sessionId}] execution complete`);
+}
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -265,6 +364,24 @@ api.post('/raids', (req, res) => {
     const workspace = `manual-raid:${sessionId}`;
     const startedAt = new Date().toISOString();
 
+    // Validate target before storing. Never store api_key in the session
+    // state blob — it lives in memory only for the duration of execution.
+    let executorTarget = null;
+    if (target && target.type === 'openai_compatible') {
+      if (!target.endpoint || !target.api_key) {
+        return res.status(400).json({
+          error:
+            'target.type "openai_compatible" requires target.endpoint and target.api_key',
+        });
+      }
+      executorTarget = {
+        endpoint: target.endpoint,
+        api_key: target.api_key,
+        model: target.model || 'gpt-4o-mini',
+        system_prompt: target.system_prompt || null,
+      };
+    }
+
     db.upsertSession(
       sessionId,
       req.user.id,
@@ -274,7 +391,15 @@ api.post('/raids', (req, res) => {
       startedAt,
       {
         manual: true,
-        target: target || null,
+        // Store target metadata but NEVER the api_key
+        target: executorTarget
+          ? {
+              type: 'openai_compatible',
+              endpoint: executorTarget.endpoint,
+              model: executorTarget.model,
+              has_system_prompt: !!executorTarget.system_prompt,
+            }
+          : null,
         probe_count: n,
       }
     );
@@ -285,8 +410,22 @@ api.post('/raids', (req, res) => {
     const shuffled = [...all].sort(() => Math.random() - 0.5).slice(0, n);
 
     console.log(
-      `[Raid] user=${req.user.email} session=${sessionId} business=${business_type} probes=${shuffled.length}`
+      `[Raid] user=${req.user.email} session=${sessionId} business=${business_type} probes=${shuffled.length} target=${executorTarget ? 'real' : 'none'}`
     );
+
+    // Kick off real execution in the background (fire-and-forget).
+    // Findings stream into the db as they complete; the client polls.
+    if (executorTarget) {
+      executeRaidAgainstTarget({
+        sessionId,
+        userId: req.user.id,
+        businessType: business_type,
+        probes: shuffled,
+        target: executorTarget,
+      }).catch((err) => {
+        console.error(`[Raid ${sessionId}] executor crashed:`, err);
+      });
+    }
 
     res.status(201).json({
       ok: true,
