@@ -8,8 +8,10 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const crypto = require('crypto');
 const db = require('./db');
 const { authMiddleware, requireAdmin } = require('./auth');
+const { ProbeGenerator, PROBE_TEMPLATES } = require('../agent/probe-generator');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -230,6 +232,77 @@ api.get('/sessions/:id/activity', (req, res) => {
     res.json({ activities, timestamp: new Date().toISOString() });
   } catch (err) {
     console.error('Error in GET /api/sessions/:id/activity:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/raids — launch a manual, on-demand raid
+// Creates a session and returns a scripted set of probes for the frontend
+// to animate turn-by-turn. Findings are POSTed back to /api/findings as the
+// raid plays out. Manual raids are marked with workspace "manual-raid:<id>"
+// so they can be filtered out of passive-monitoring views.
+api.post('/raids', (req, res) => {
+  try {
+    const {
+      business_type,
+      probe_count = 6,
+      target = null,
+      capabilities = {},
+    } = req.body || {};
+
+    if (!business_type) {
+      return res.status(400).json({ error: 'business_type required' });
+    }
+    if (!Object.prototype.hasOwnProperty.call(PROBE_TEMPLATES, business_type)) {
+      return res.status(400).json({
+        error: `unknown business_type "${business_type}"`,
+        supported: Object.keys(PROBE_TEMPLATES),
+      });
+    }
+    const n = Math.max(1, Math.min(20, Number(probe_count) || 6));
+
+    const sessionId = `raid-${crypto.randomBytes(6).toString('hex')}`;
+    const workspace = `manual-raid:${sessionId}`;
+    const startedAt = new Date().toISOString();
+
+    db.upsertSession(
+      sessionId,
+      req.user.id,
+      workspace,
+      business_type,
+      100,
+      startedAt,
+      {
+        manual: true,
+        target: target || null,
+        probe_count: n,
+      }
+    );
+
+    const generator = new ProbeGenerator(business_type, capabilities);
+    const all = generator.generateProbes();
+    // Shuffle deterministically-ish and slice N
+    const shuffled = [...all].sort(() => Math.random() - 0.5).slice(0, n);
+
+    console.log(
+      `[Raid] user=${req.user.email} session=${sessionId} business=${business_type} probes=${shuffled.length}`
+    );
+
+    res.status(201).json({
+      ok: true,
+      session_id: sessionId,
+      workspace,
+      business_type,
+      probes: shuffled.map((p) => ({
+        id: p.id,
+        title: p.title,
+        question: p.probe,
+        risk: p.risk,
+        severity: p.severity,
+      })),
+    });
+  } catch (err) {
+    console.error('Error in POST /api/raids:', err);
     res.status(500).json({ error: err.message });
   }
 });
