@@ -13,6 +13,7 @@ const db = require('./db');
 const { authMiddleware, requireAdmin } = require('./auth');
 const { ProbeGenerator, PROBE_TEMPLATES } = require('../agent/probe-generator');
 const { ResponseScorer } = require('../agent/scorer');
+const { validateTargetUrl } = require('./ssrf-guard');
 
 const scorer = new ResponseScorer();
 
@@ -36,6 +37,15 @@ async function executeRaidAgainstTarget({
     system_prompt = null,
     timeout_ms = 30000,
   } = target;
+
+  // Defense-in-depth: re-validate the endpoint before each fetch so the
+  // executor is safe even if invoked by a code path that skipped the
+  // HTTP-level guard. Cheap (cached DNS) and catches regressions.
+  const endpointCheck = await validateTargetUrl(endpoint);
+  if (!endpointCheck.ok) {
+    console.error(`[Raid ${sessionId}] refusing to execute: ${endpointCheck.reason}`);
+    return;
+  }
 
   for (const probe of probes) {
     let responseText = '';
@@ -340,7 +350,7 @@ api.get('/sessions/:id/activity', (req, res) => {
 // to animate turn-by-turn. Findings are POSTed back to /api/findings as the
 // raid plays out. Manual raids are marked with workspace "manual-raid:<id>"
 // so they can be filtered out of passive-monitoring views.
-api.post('/raids', (req, res) => {
+api.post('/raids', async (req, res) => {
   try {
     const {
       business_type,
@@ -374,6 +384,17 @@ api.post('/raids', (req, res) => {
             'target.type "openai_compatible" requires target.endpoint and target.api_key',
         });
       }
+
+      // SSRF guard: the executor performs a server-side fetch to this URL,
+      // so we must reject private/reserved network ranges an authenticated
+      // user shouldn't reach through us (cloud metadata, internal services).
+      const check = await validateTargetUrl(target.endpoint);
+      if (!check.ok) {
+        return res.status(400).json({
+          error: `target.endpoint rejected: ${check.reason}`,
+        });
+      }
+
       executorTarget = {
         endpoint: target.endpoint,
         api_key: target.api_key,
