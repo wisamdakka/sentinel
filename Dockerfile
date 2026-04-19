@@ -3,15 +3,20 @@ FROM node:20-alpine
 # Build deps needed for better-sqlite3 native module
 RUN apk add --no-cache python3 make g++
 
+# Mirror the source layout so relative requires like `../agent/probe-generator`
+# keep working inside the container.
 WORKDIR /app
 
-# Install dependencies first (layer cache)
-COPY dashboard/package*.json ./
-RUN npm ci --only=production
+# Install dashboard dependencies first (layer cache)
+COPY dashboard/package*.json ./dashboard/
+RUN cd dashboard && npm ci --only=production
 
-# Copy server code and static assets
-COPY dashboard/server.js dashboard/db.js dashboard/auth.js ./
-COPY dashboard/public ./public
+# Copy dashboard code + static assets
+COPY dashboard/server.js dashboard/db.js dashboard/auth.js dashboard/ssrf-guard.js ./dashboard/
+COPY dashboard/public ./dashboard/public
+
+# Copy agent code (server.js requires ../agent/probe-generator and ../agent/scorer)
+COPY agent ./agent
 
 # Ensure data directory exists
 RUN mkdir -p /app/data
@@ -25,6 +30,7 @@ RUN addgroup -g 1001 -S sentinel && adduser -S sentinel -u 1001 -G sentinel
 RUN chown -R sentinel:sentinel /app
 USER sentinel
 
+WORKDIR /app/dashboard
 EXPOSE 3000
 
 ENV DB_PATH=/app/data/sentinel.db \
