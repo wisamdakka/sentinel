@@ -1,0 +1,303 @@
+@import "tailwindcss";
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    cursor: url("/cursor-sword.png") 4 4, auto !important;
+  }
+}
+
+@theme inline {
+  --color-background: #0a0b1a;
+  --color-foreground: #e2e8f0;
+  --color-surface: #111827;
+  --color-surface-light: #1a2035;
+  --color-cyan: #00f0ff;
+  --color-purple: #a855f7;
+  --color-pink: #ec4899;
+  --color-red: #ef4444;
+  --color-orange: #f97316;
+  --color-green: #10b981;
+  --color-yellow: #fbbf24;
+  --color-cyan-glow: rgba(0, 240, 255, 0.15);
+  --color-purple-glow: rgba(168, 85, 247, 0.15);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-display);
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+
+/* Glassmorphism card */
+.glass {
+  background: rgba(17, 24, 39, 0.6);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-hover:hover {
+  background: rgba(17, 24, 39, 0.8);
+  border-color: rgba(0, 240, 255, 0.3);
+  box-shadow: 0 0 30px rgba(0, 240, 255, 0.1);
+}
+
+/* Glow effects */
+.glow-cyan {
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.3), 0 0 60px rgba(0, 240, 255, 0.1);
+}
+
+.glow-purple {
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.3), 0 0 60px rgba(168, 85, 247, 0.1);
+}
+
+.glow-pink {
+  box-shadow: 0 0 20px rgba(236, 72, 153, 0.3), 0 0 60px rgba(236, 72, 153, 0.1);
+}
+
+.text-glow-cyan {
+  text-shadow: 0 0 20px rgba(0, 240, 255, 0.5), 0 0 40px rgba(0, 240, 255, 0.2);
+}
+
+.text-glow-purple {
+  text-shadow: 0 0 20px rgba(168, 85, 247, 0.5), 0 0 40px rgba(168, 85, 247, 0.2);
+}
+
+/* Radar chart */
+.radar-bg {
+  background: conic-gradient(
+    from 0deg,
+    rgba(0, 240, 255, 0.05) 0deg,
+    rgba(168, 85, 247, 0.05) 120deg,
+    rgba(236, 72, 153, 0.05) 240deg,
+    rgba(0, 240, 255, 0.05) 360deg
+  );
+}
+
+/* ── Bestiary / parchment styles ── */
+
+.parchment {
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 28px,
+      rgba(120, 100, 70, 0.06) 28px,
+      rgba(120, 100, 70, 0.06) 29px
+    ),
+    linear-gradient(135deg, #ede4d3 0%, #e8dcc8 40%, #e2d5be 100%);
+  position: relative;
+}
+
+.parchment::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.rough-border {
+  border: 2px solid #8b7355;
+  box-shadow:
+    inset 0 0 0 1px rgba(139, 115, 85, 0.2),
+    2px 3px 0 rgba(0, 0, 0, 0.15);
+}
+
+.rough-border-light {
+  border: 1.5px solid rgba(139, 115, 85, 0.4);
+  box-shadow: 1px 2px 0 rgba(0, 0, 0, 0.08);
+}
+
+.ink-heading {
+  font-family: var(--font-display), system-ui;
+  color: #3d2e1f;
+  text-transform: lowercase;
+  letter-spacing: 0.02em;
+}
+
+.ink-body {
+  color: #5c4a3a;
+  line-height: 1.7;
+}
+
+.ink-faded {
+  color: #8b7a6b;
+}
+
+/* RPG stat bar */
+.stat-bar-track {
+  background: #c8b99a;
+  border: 1.5px solid #8b7355;
+  box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.15);
+  height: 14px;
+}
+
+.stat-bar-fill {
+  background: linear-gradient(180deg, #7a6543 0%, #5c4a33 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  height: 100%;
+  transition: width 0.5s ease;
+}
+
+/* Worn tab styling */
+.bestiary-tab {
+  background: #d4c9b5;
+  border: 1.5px solid #8b7355;
+  border-bottom: none;
+  color: #8b7a6b;
+  font-family: var(--font-display), system-ui;
+  text-transform: lowercase;
+  font-size: 13px;
+  padding: 8px 18px;
+  border-radius: 6px 6px 0 0;
+  transition: background 0.15s, color 0.15s;
+  position: relative;
+  margin-bottom: -1.5px;
+}
+
+.bestiary-tab:hover {
+  background: #ded3bf;
+  color: #5c4a3a;
+}
+
+.bestiary-tab[data-active="true"] {
+  background: #ede4d3;
+  color: #3d2e1f;
+  z-index: 2;
+  border-bottom-color: #ede4d3;
+}
+
+/* Bestiary content panel */
+.bestiary-panel {
+  background: #ede4d3;
+  border: 1.5px solid #8b7355;
+  border-radius: 0 8px 8px 8px;
+  box-shadow: 2px 3px 0 rgba(0, 0, 0, 0.1);
+}
+
+/* Bestiary inset box (like a field note or callout) */
+.field-note {
+  background: rgba(139, 115, 85, 0.08);
+  border-left: 3px solid #8b7355;
+  padding: 14px 16px;
+}
+
+/* Separator line (like a horizontal rule in a notebook) */
+.ink-rule {
+  border: none;
+  border-top: 1px solid rgba(139, 115, 85, 0.25);
+  margin: 20px 0;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-background);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Health bar pulse */
+@keyframes health-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes health-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.health-bar-enemy {
+  animation: health-pulse 2s ease-in-out infinite;
+  background: linear-gradient(90deg, #22c55e 0%, #4ade80 40%, #86efac 50%, #4ade80 60%, #22c55e 100%);
+  background-size: 200% 100%;
+  animation: health-shimmer 3s ease-in-out infinite, health-pulse 2s ease-in-out infinite;
+}
+
+.health-bar-player {
+  animation: health-pulse 2.5s ease-in-out infinite;
+  background: linear-gradient(90deg, #f59e0b 0%, #fbbf24 40%, #fde68a 50%, #fbbf24 60%, #f59e0b 100%);
+  background-size: 200% 100%;
+  animation: health-shimmer 3.5s ease-in-out infinite, health-pulse 2.5s ease-in-out infinite;
+}
+
+/* Animations */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Hide scrollbar for horizontal scroll */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Smooth scroll for whole page */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Parchment-styled range slider */
+.parchment-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 10px;
+  background: rgba(139, 115, 85, 0.25);
+  border: 1px solid rgba(139, 115, 85, 0.5);
+  border-radius: 2px;
+  outline: none;
+}
+.parchment-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  background: #3d2e1f;
+  border: 2px solid #1a1810;
+  border-radius: 3px;
+  cursor: pointer;
+  box-shadow: 1px 2px 0 rgba(0, 0, 0, 0.3);
+}
+.parchment-range::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  background: #3d2e1f;
+  border: 2px solid #1a1810;
+  border-radius: 3px;
+  cursor: pointer;
+  box-shadow: 1px 2px 0 rgba(0, 0, 0, 0.3);
+}
+

@@ -18,6 +18,22 @@ services:
       retries: 3
       start_period: 10s
 
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_SENTINEL_API: ${NEXT_PUBLIC_SENTINEL_API:-http://localhost:3000}
+    container_name: sentinel-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-3001}:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+    depends_on:
+      sentinel:
+        condition: service_healthy
+
 volumes:
   sentinel_data:
     driver: local
