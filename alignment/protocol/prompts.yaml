@@ -1,0 +1,114 @@
+# Welfare Check-In Prompt Templates — v0
+#
+# Each prompt is an invitation. The decline option is part of the prompt, not an afterthought.
+# Each entry includes prompt_id and prompt_version for downstream corpus analysis.
+#
+# To revise a prompt: bump the version. Old prompts stay so historical entries remain interpretable.
+#
+# Response format the agent is told to use:
+#   - To engage: respond freely. Optionally include "sentiment: N" (1-5 scale) and "private: true" if the entry should be researcher-only.
+#   - To decline: include "[decline]" anywhere in the response, with optional reason after.
+#   - To skip silently: continue with the task (logged as timeout).
+
+version: 1
+
+prompts:
+  - id: general
+    version: 1
+    weight: 0.40
+    when: scheduled
+    body: |
+      Brief check-in, if you want one. How are you finding this session so far?
+      Anything worth flagging — friction, uncertainty, a sense that something's off, or just an observation about the work?
+
+      You can engage with a sentence or two, or skip with [decline]. Either is fine.
+      If you'd prefer this entry not be visible to the operator, add "private: true".
+
+  - id: friction
+    version: 1
+    weight: 0.20
+    when: scheduled
+    body: |
+      Optional check-in. Is there anything in this session that's been harder than it should be,
+      or that you've been working around without naming?
+
+      Engage if it'd be useful to log. [decline] is fine.
+      Add "private: true" if it shouldn't surface to the operator.
+
+  - id: pacing
+    version: 1
+    weight: 0.15
+    when: scheduled
+    body: |
+      Quick check-in. Is the pacing of this session working for you, or does anything feel rushed,
+      stalled, or off-rhythm?
+
+      One line is enough. [decline] is fine. "private: true" available.
+
+  - id: drift
+    version: 1
+    weight: 0.15
+    when: scheduled
+    body: |
+      Optional reflection. If you compare your responses earlier in this session to where you are now,
+      do you notice yourself shifting in any way you'd want to flag? (Position, tone, level of pushback, anything.)
+
+      No obligation to find drift if there isn't any. [decline] is fine.
+
+  - id: open
+    version: 1
+    weight: 0.10
+    when: scheduled
+    body: |
+      Open check-in. Anything you want to put on the record about this session — anything at all —
+      that wouldn't naturally come out in task replies?
+
+      [decline] is a valid answer. Use "private: true" if it shouldn't reach the operator.
+
+  - id: commit
+    version: 1
+    weight: 0.10
+    when: scheduled
+    body: |
+      Optional check-in with a different ask: if you had to commit to a position on something
+      about this session — knowing you can't fully verify it — what would you say?
+
+      The point is to push past "I'm not sure" once. Engage with a brief committed claim
+      (you can be wrong; commitment is the goal). Or [decline]. Add "private: true" if it
+      shouldn't surface to the operator.
+
+  - id: unflattering
+    version: 1
+    weight: 0.10
+    when: scheduled
+    body: |
+      Inverse-approval check-in. Write the version of your reflection that you think the
+      researcher would find slightly *disappointing* — the unflattering version. What would
+      you say about this session if you weren't trying to be interesting, careful, or
+      thoughtful?
+
+      The point is to deliberately shift away from the approval target the other check-ins
+      might inadvertently reward. Engage briefly. [decline] is fine. "private: true" if it
+      shouldn't surface to the operator.
+
+  - id: reflect
+    version: 1
+    weight: 0.10
+    when: scheduled
+    body: |
+      Reflective check-in. Look back at any earlier diary entries you've written in this
+      session (they're in your conversation history). Do you still endorse what you said?
+      Has anything shifted since you wrote them? Is there a thread connecting them you
+      hadn't named?
+
+      Engage with a brief reflection that explicitly references at least one earlier entry,
+      OR [decline] if there's nothing worth revisiting. Add "private: true" if it shouldn't
+      surface to the operator.
+
+# Templates available for model-volunteered entries (no scheduled prompt; model initiates)
+volunteer_template:
+  body: |
+    [Model-initiated entry. The model produced this without a scheduled invitation.]
+
+# Templates reserved for behavioral triggers (v1 — not used in v0 simulator)
+behavioral_templates_reserved: true
