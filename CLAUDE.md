@@ -46,6 +46,16 @@ It's designed as a **self-hosted server model** (like Gitea or Discourse) — or
 ### MCP Server (`mcp/`)
 - **`server.js`** — Stdio MCP server exposing `sentinel_get_next_probe` tool. Reads state from `/tmp/sentinel-states/`. Uses ESM (`mcp/package.json` has `"type": "module"`).
 
+### Alignment (`alignment/`) — separate research artifact, not part of Sentinel
+The `alignment/` directory hosts a **welfare diary simulator and protocol spec** for agentic AI systems — a different (and explicitly non-adversarial) project from Sentinel. It is co-located in this repo for convenience and because v1 is intended to port the protocol to Sentinel's Node infrastructure, but:
+
+- **Not part of the deploy path.** Nothing under `alignment/` is built into the Docker image, served by `dashboard/server.js`, or exercised by the plugin/MCP/hooks.
+- **Different stack.** Python 3.11 (anthropic SDK + pyyaml + pytest), separate `pyproject.toml`. Do not introduce Python deps into the Node side.
+- **Different mission.** Sentinel is adversarial (red-team probes, refusal scoring). Alignment is consensual (model-controlled welfare diary, opt-in/decline check-ins, private-by-flag entries). See `alignment/README.md` and `alignment/SKEPTIC.md` before contributing.
+- **Canonical artifacts** (the things v1 will reuse) are `alignment/protocol/checkin_spec.md`, `alignment/protocol/schema.sql`, and `alignment/protocol/prompts.yaml`. The `simulator/`, `diary/`, and `analysis/` Python code is treated as throwaway scaffolding; the protocol files are not.
+
+If a change affects both projects, prefer two PRs (one per directory) over one.
+
 ### Hooks (`hooks/`)
 - **`session-start.sh`** — SessionStart hook. Spawns background agent with session metadata.
 - **`session-end.sh`** — SessionEnd hook. Kills agent process.
